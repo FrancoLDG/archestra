@@ -9,6 +9,160 @@ import {
 import { parseDockerArgsToLocalConfig } from "./docker-args-parser";
 import type { McpCatalogFormValues } from "./mcp-catalog-form.types";
 
+type LocalEnvironment = NonNullable<
+  NonNullable<McpCatalogFormValues["localConfig"]>["environment"]
+>[number];
+
+export type ParsedMcpConfig = {
+  command?: string;
+  arguments?: string[];
+  environment?: LocalEnvironment[];
+  dockerImage?: string;
+  transportType?: "stdio" | "streamable-http";
+  httpPort?: string;
+  httpPath?: string;
+  serverUrl?: string;
+  serverType?: "local" | "remote";
+};
+
+function firstConfigObject(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const object = value as Record<string, unknown>;
+
+  for (const key of ["mcpServers", "servers", "server"]) {
+    const nested = object[key];
+    if (!nested || typeof nested !== "object") continue;
+    if (Array.isArray(nested)) continue;
+    const nestedObject = nested as Record<string, unknown>;
+    if (
+      "command" in nestedObject ||
+      "args" in nestedObject ||
+      "arguments" in nestedObject ||
+      "url" in nestedObject ||
+      "serverUrl" in nestedObject
+    ) {
+      return nestedObject;
+    }
+    const first = Object.values(nestedObject).find(
+      (candidate) => candidate && typeof candidate === "object",
+    );
+    if (first && !Array.isArray(first)) {
+      return first as Record<string, unknown>;
+    }
+  }
+
+  if (
+    "command" in object ||
+    "args" in object ||
+    "arguments" in object ||
+    "url" in object ||
+    "serverUrl" in object ||
+    "env" in object ||
+    "environment" in object
+  ) {
+    return object;
+  }
+
+  const first = Object.values(object).find(
+    (candidate) => candidate && typeof candidate === "object",
+  );
+  return first && !Array.isArray(first)
+    ? (first as Record<string, unknown>)
+    : null;
+}
+
+function parseArguments(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const args = value
+    .filter((arg) => typeof arg === "string" || typeof arg === "number")
+    .map((arg) => String(arg));
+  return args.length > 0 ? args : [];
+}
+
+function parseEnvironment(value: unknown): LocalEnvironment[] | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    const entries = value.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === "object" && !Array.isArray(entry),
+    );
+    if (entries.length === 0) return [];
+    return entries.map((entry) => ({
+      key: String(entry.key ?? entry.name ?? ""),
+      type:
+        entry.type === "secret" ||
+        entry.type === "boolean" ||
+        entry.type === "number"
+          ? entry.type
+          : "plain_text",
+      value:
+        entry.value === undefined || entry.value === null
+          ? undefined
+          : String(entry.value),
+      promptOnInstallation: Boolean(entry.promptOnInstallation),
+      required: Boolean(entry.required),
+      description:
+        entry.description === undefined ? undefined : String(entry.description),
+    }));
+  }
+  if (typeof value !== "object") return undefined;
+  return Object.entries(value as Record<string, unknown>).map(([key, entry]) => ({
+    key,
+    type: "plain_text",
+    value: entry === undefined || entry === null ? undefined : String(entry),
+    promptOnInstallation: false,
+    required: false,
+  }));
+}
+
+/** Parse common MCP JSON config shapes without changing the line-based input format. */
+export function parseMcpConfigInput(input: string): ParsedMcpConfig | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    return null;
+  }
+
+  if (Array.isArray(parsed)) {
+    const argumentsArray = parseArguments(parsed);
+    return argumentsArray
+      ? { arguments: argumentsArray, serverType: "local" }
+      : null;
+  }
+
+  const config = firstConfigObject(parsed);
+  if (!config) return null;
+
+  const url = config.url ?? config.serverUrl;
+  const transport = String(config.type ?? config.transport ?? "").toLowerCase();
+  const serverUrl = typeof url === "string" ? url : undefined;
+  const hasRemoteUrl = Boolean(serverUrl);
+  const parsedConfig: ParsedMcpConfig = {
+    command: typeof config.command === "string" ? config.command : undefined,
+    arguments: parseArguments(config.args ?? config.arguments),
+    environment: parseEnvironment(config.env ?? config.environment),
+    dockerImage:
+      typeof config.dockerImage === "string" ? config.dockerImage : undefined,
+    transportType:
+      transport === "stdio"
+        ? "stdio"
+        : transport === "streamable-http" || transport === "http" || hasRemoteUrl
+          ? "streamable-http"
+          : undefined,
+    httpPort:
+      config.port === undefined ? undefined : String(config.port),
+    httpPath:
+      typeof config.path === "string" ? config.path : undefined,
+    serverUrl,
+    serverType: hasRemoteUrl ? "remote" : "local",
+  };
+
+  return Object.values(parsedConfig).some((value) => value !== undefined)
+    ? parsedConfig
+    : null;
+}
+
 type McpCatalogApiData =
   archestraApiTypes.CreateInternalMcpCatalogItemData["body"];
 
