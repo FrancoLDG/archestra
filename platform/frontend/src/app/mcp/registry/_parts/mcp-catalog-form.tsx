@@ -104,6 +104,7 @@ import {
   type McpCatalogFormValues,
 } from "./mcp-catalog-form.types";
 import {
+  parseMcpConfigInput,
   transformCatalogItemToFormValues,
   transformFormToApiData,
 } from "./mcp-catalog-form.utils";
@@ -498,6 +499,8 @@ export function McpCatalogForm({
     initialLabelsFromProps,
   );
   const labelsRef = useRef<ProfileLabelsRef>(null);
+  const [jsonConfigInput, setJsonConfigInput] = useState("");
+  const [jsonConfigError, setJsonConfigError] = useState<string | null>(null);
 
   // Report dirty state to parent (includes label changes)
   const { isDirty: isFormDirty, dirtyFields } = form.formState;
@@ -571,6 +574,60 @@ export function McpCatalogForm({
   const isTransportTypeDirty = deploymentField("transportType");
   const isHttpPortDirty = deploymentField("httpPort");
   const isHttpPathDirty = deploymentField("httpPath");
+
+  const applyJsonConfig = () => {
+    const parsed = parseMcpConfigInput(jsonConfigInput);
+    if (!parsed) {
+      setJsonConfigError(
+        "Could not find a supported MCP configuration in that JSON.",
+      );
+      return;
+    }
+
+    setJsonConfigError(null);
+    if (parsed.serverType) {
+      form.setValue("serverType", parsed.serverType, { shouldDirty: true });
+    }
+    if (parsed.serverUrl !== undefined) {
+      form.setValue("serverUrl", parsed.serverUrl, { shouldDirty: true });
+    }
+    if (parsed.command !== undefined) {
+      form.setValue("localConfig.command", parsed.command, {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.arguments !== undefined) {
+      form.setValue("localConfig.arguments", parsed.arguments.join("\n"), {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.environment !== undefined) {
+      form.setValue("localConfig.environment", parsed.environment, {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.dockerImage !== undefined) {
+      form.setValue("localConfig.dockerImage", parsed.dockerImage, {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.transportType !== undefined) {
+      form.setValue("localConfig.transportType", parsed.transportType, {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.httpPort !== undefined) {
+      form.setValue("localConfig.httpPort", parsed.httpPort, {
+        shouldDirty: true,
+      });
+    }
+    if (parsed.httpPath !== undefined) {
+      form.setValue("localConfig.httpPath", parsed.httpPath, {
+        shouldDirty: true,
+      });
+    }
+    setJsonConfigInput("");
+  };
 
   // The per-field `is*Dirty` flags below drive `ReinstallHint` badges
   // next to individual inputs. The form-level cascade decision lives in
@@ -1441,6 +1498,41 @@ export function McpCatalogForm({
                       </FormItem>
                     )}
                   />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mcp-json-input">Import MCP JSON</Label>
+                    <Textarea
+                      id="mcp-json-input"
+                      value={jsonConfigInput}
+                      onChange={(event) => {
+                        setJsonConfigInput(event.target.value);
+                        setJsonConfigError(null);
+                      }}
+                      placeholder={'{"command":"npx","args":["-y","server"]}'}
+                      className="font-mono min-h-24"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={applyJsonConfig}
+                        disabled={!jsonConfigInput.trim()}
+                      >
+                        <Code className="mr-2 h-4 w-4" />
+                        Import JSON
+                      </Button>
+                      {jsonConfigError ? (
+                        <p className="text-destructive text-sm">
+                          {jsonConfigError}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      Accepts common MCP formats with command, args, env, URL,
+                      and transport fields.
+                    </p>
+                  </div>
 
                   <FormField
                     control={form.control}
