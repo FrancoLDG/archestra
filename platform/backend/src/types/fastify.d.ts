@@ -11,6 +11,12 @@ declare module "fastify" {
     organizationId: string;
     /** Auth method used for this request; set by Authnz.populateUserInfo. */
     authMethod?: "session" | "api_key" | "service_account";
+    /**
+     * When the session is an impersonated one, the user id of the real human
+     * driving it (request.user is the impersonation target). Set by
+     * Authnz.populateUserInfo; consumed by the audit hook for attribution.
+     */
+    impersonatedBy?: string;
     serviceAccount?: SelectServiceAccount;
     serviceAccountAuthResult?: {
       serviceAccount: SelectServiceAccount;
