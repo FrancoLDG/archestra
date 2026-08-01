@@ -1,10 +1,66 @@
 import type { McpCatalogFormValues } from "./mcp-catalog-form.types";
 import {
   buildCloneFormValues,
+  parseMcpConfigInput,
   transformCatalogItemToFormValues,
   transformExternalCatalogToFormValues,
   transformFormToApiData,
 } from "./mcp-catalog-form.utils";
+
+describe("parseMcpConfigInput", () => {
+  it("parses a standard mcpServers config", () => {
+    expect(
+      parseMcpConfigInput(
+        JSON.stringify({
+          mcpServers: {
+            github: {
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-github"],
+              env: { GITHUB_PERSONAL_ACCESS_TOKEN: "token" },
+            },
+          },
+        }),
+      ),
+    ).toEqual({
+      command: "npx",
+      arguments: ["-y", "@modelcontextprotocol/server-github"],
+      environment: [
+        {
+          key: "GITHUB_PERSONAL_ACCESS_TOKEN",
+          type: "plain_text",
+          value: "token",
+          promptOnInstallation: false,
+          required: false,
+        },
+      ],
+      serverType: "local",
+    });
+  });
+
+  it("parses a remote server config and numeric args", () => {
+    expect(
+      parseMcpConfigInput(
+        JSON.stringify({
+          server: {
+            type: "streamable-http",
+            url: "https://example.com/mcp",
+            args: ["--port", 8080],
+          },
+        }),
+      ),
+    ).toEqual({
+      arguments: ["--port", "8080"],
+      transportType: "streamable-http",
+      serverUrl: "https://example.com/mcp",
+      serverType: "remote",
+    });
+  });
+
+  it("returns null for invalid or unsupported JSON", () => {
+    expect(parseMcpConfigInput("not json")).toBeNull();
+    expect(parseMcpConfigInput(JSON.stringify({ hello: "world" }))).toBeNull();
+  });
+});
 
 describe("transformFormToApiData", () => {
   it("maps custom auth and additional headers into userConfig", () => {
