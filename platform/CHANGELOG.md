@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.26](https://github.com/archestra-ai/archestra/compare/platform-v1.3.25...platform-v1.3.26) (2026-08-01)
+
+
+### Features
+
+* **auth:** require-2FA enforcement with dedicated enrollment page, session lifetime cap, 2FA enterprise gating, and sign-in origin banner cleanup ([#7039](https://github.com/archestra-ai/archestra/issues/7039)) ([68b4246](https://github.com/archestra-ai/archestra/commit/68b4246802e916137420ee6e88a77703ca1b5e0c))
+* **mcp-apps:** let MCP Apps use the *_file tools ([#6922](https://github.com/archestra-ai/archestra/issues/6922)) ([fc9f967](https://github.com/archestra-ai/archestra/commit/fc9f96704a46e89da329e33aec92d1f9fe829b4a))
+* **mcp-runtime:** push deployment states from K8s watch events instead of blind polling ([#7036](https://github.com/archestra-ai/archestra/issues/7036)) ([441ecc6](https://github.com/archestra-ai/archestra/commit/441ecc6234a76cc2ac25cb770fd48fc4dce96fd7))
+* **rbac:** own-vs-all log visibility (log:admin / auditLog:admin) and the Platform Admin role ([#7038](https://github.com/archestra-ai/archestra/issues/7038)) ([99ae9b3](https://github.com/archestra-ai/archestra/commit/99ae9b300a25dd5b53f6b8a57bc37923509570c6))
+
+
+### Bug Fixes
+
+* **llm:** make dual LLM sanitization terminate, fail closed, and run on subscription credentials ([#7018](https://github.com/archestra-ai/archestra/issues/7018)) ([6eb8e57](https://github.com/archestra-ai/archestra/commit/6eb8e57d79fc9d64df964b1b14bb60f57f777a7a))
+* **mcp-runtime:** don't mark healthy MCP pods failed on K8s API throttling ([#7035](https://github.com/archestra-ai/archestra/issues/7035)) ([acea84b](https://github.com/archestra-ai/archestra/commit/acea84b5f04f8dad6a0f077ccb16a7004345f52d))
+
 ## [1.3.25](https://github.com/archestra-ai/archestra/compare/platform-v1.3.24...platform-v1.3.25) (2026-07-31)
 
 
