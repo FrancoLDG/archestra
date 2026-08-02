@@ -1,5 +1,6 @@
 import { LocalConfigFormSchema } from "@archestra/shared";
 import { z } from "zod";
+import { parseArgumentsInput } from "./arguments-parser";
 
 const HEADER_NAME_REGEX = /^[A-Za-z0-9-]+$/;
 const SSO_CALLBACK_PATH = "/api/auth/sso/callback";
@@ -267,6 +268,19 @@ export const formSchema = z
         continue;
       }
       normalizedHeaders.add(normalizedHeaderName);
+    }
+
+    if (data.serverType === "local" && data.localConfig?.arguments.trim()) {
+      try {
+        parseArgumentsInput(data.localConfig.arguments);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            error instanceof Error ? error.message : "Invalid arguments format",
+          path: ["localConfig", "arguments"],
+        });
+      }
     }
   })
   .refine(

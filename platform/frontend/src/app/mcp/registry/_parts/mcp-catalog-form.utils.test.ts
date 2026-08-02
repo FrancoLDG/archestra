@@ -938,6 +938,20 @@ describe("transformFormToApiData - secret env var preservation", () => {
     };
   }
 
+  it("converts JSON argument arrays into the API argument list", () => {
+    const values = buildLocalFormValues([]);
+    values.localConfig = {
+      ...values.localConfig,
+      arguments: '["server.js", "--transport", "stdio"]',
+    };
+
+    expect(transformFormToApiData(values).localConfig?.arguments).toEqual([
+      "server.js",
+      "--transport",
+      "stdio",
+    ]);
+  });
+
   it("emits empty value (not a mask sentinel) for an unedited secret row", () => {
     const result = transformFormToApiData(
       buildLocalFormValues([
